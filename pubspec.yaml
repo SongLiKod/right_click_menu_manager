@@ -1,0 +1,38 @@
+name: right_click_menu_manager
+description: Windows 右键菜单管理器 - 自定义右键菜单、调整菜单层级
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fluent_ui: ^4.9.0
+  window_manager: ^0.4.3
+  win32: ^5.5.0
+  system_theme: ^3.1.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.4
+  file_picker: ^8.0.7
+  provider: ^6.1.2
+  uuid: ^4.4.2
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  msix: ^3.16.8
+
+flutter:
+  uses-material-design: true
+
+msix_config:
+  display_name: 右键菜单管理器
+  publisher_display_name: RightClickMenuManager
+  identity_name: com.rightclickmenumanager.app
+  install_certificate: false
+  build_windows: false
