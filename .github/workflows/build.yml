@@ -34,6 +34,7 @@ jobs:
       - name: Build Windows release
         run: |
           flutter clean
+          flutter pub get
           flutter build windows --release
 
       - name: Package build artifact
