@@ -32,7 +32,9 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Build Windows release
-        run: flutter build windows --release
+        run: |
+          flutter create --platforms=windows --no-pub .
+          flutter build windows --release
 
       - name: Package build artifact
         shell: pwsh
