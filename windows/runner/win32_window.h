@@ -31,20 +31,26 @@ class Win32Window {
 
   HWND GetHandle();
 
+  void SetChildContent(HWND content);
+
   virtual void OnDestroy();
 
  protected:
+  virtual bool OnCreate();
   virtual LRESULT MessageHandler(HWND window, UINT const message, WPARAM const wparam,
                                  LPARAM const lparam) noexcept;
 
   void OnClose();
+  void Destroy();
 
  private:
   bool quit_on_close_ = false;
   HWND window_handle_ = nullptr;
+  HWND child_content_ = nullptr;
 
   static LRESULT CALLBACK WndProc(HWND window, UINT const message, WPARAM const wparam,
                                   LPARAM const lparam) noexcept;
+  static Win32Window *GetThisFromHandle(HWND const window) noexcept;
 };
 
 #endif  // RUNNER_WIN32_WINDOW_H_

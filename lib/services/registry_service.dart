@@ -68,7 +68,7 @@ class RegistryService {
       for (var i = 0;; i++) {
         index.value = nameLen;
         final ret = RegEnumKeyEx(
-            hKey, i, name, index, nullptr, nullptr, nullptr, nullptr);
+            hKey, i, name.cast<Utf16>(), index, nullptr, nullptr, nullptr, nullptr);
 
         if (ret == ERROR_NO_MORE_ITEMS) break;
         if (ret != ERROR_SUCCESS) continue;
@@ -231,7 +231,7 @@ class RegistryService {
         final index = calloc<DWORD>();
         index.value = nameLen;
         final ret =
-            RegEnumKeyEx(hKey, i, name, index, nullptr, nullptr, nullptr, nullptr);
+            RegEnumKeyEx(hKey, i, name.cast<Utf16>(), index, nullptr, nullptr, nullptr, nullptr);
         calloc.free(index);
 
         if (ret == ERROR_NO_MORE_ITEMS) break;
