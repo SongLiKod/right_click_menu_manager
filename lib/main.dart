@@ -20,13 +20,13 @@ void main() async {
     size: Size(1100, 700),
     minimumSize: Size(800, 500),
     center: true,
-    backgroundColor: Color(0x00000000),
+    backgroundColor: Color(0xFF202020),
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
     title: '右键菜单管理器',
   );
 
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
+  await windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
   });

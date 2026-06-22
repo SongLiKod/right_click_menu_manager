@@ -49,7 +49,6 @@ class RegistryService {
       calloc.free(subKey);
 
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return items;
       }
 
@@ -104,7 +103,6 @@ class RegistryService {
       calloc.free(subKey);
 
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return null;
       }
 
@@ -150,7 +148,6 @@ class RegistryService {
       calloc.free(subKey);
 
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return '';
       }
 
@@ -215,7 +212,6 @@ class RegistryService {
       final result = RegOpenKeyEx(
           hkcr, r'.'.toNativeUtf16(), 0, KEY_READ, phKey);
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return items;
       }
 
@@ -371,7 +367,6 @@ class RegistryService {
       calloc.free(subKey);
 
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return false;
       }
 
@@ -397,17 +392,16 @@ class RegistryService {
       final result =
           RegCreateKeyEx(hkcr, subKey, 0, nullptr, 0, KEY_WRITE, nullptr, phKey, disp);
       calloc.free(subKey);
-      calloc.free(disp);
 
       if (result == ERROR_SUCCESS) {
         RegCloseKey(phKey.value);
       }
-      calloc.free(phKey);
       return result == ERROR_SUCCESS;
     } catch (_) {
+      return false;
+    } finally {
       calloc.free(disp);
       calloc.free(phKey);
-      return false;
     }
   }
 
@@ -420,7 +414,6 @@ class RegistryService {
       calloc.free(subKey);
 
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return false;
       }
 
@@ -435,12 +428,12 @@ class RegistryService {
       if (pValueName != nullptr) calloc.free(pValueName);
       calloc.free(pData);
       RegCloseKey(phKey.value);
-      calloc.free(phKey);
 
       return setResult == ERROR_SUCCESS;
     } catch (_) {
-      calloc.free(phKey);
       return false;
+    } finally {
+      calloc.free(phKey);
     }
   }
 
@@ -453,7 +446,6 @@ class RegistryService {
       calloc.free(subKey);
 
       if (result != ERROR_SUCCESS) {
-        calloc.free(phKey);
         return false;
       }
 
@@ -461,12 +453,12 @@ class RegistryService {
       final delResult = RegDeleteValue(phKey.value, pValueName);
       calloc.free(pValueName);
       RegCloseKey(phKey.value);
-      calloc.free(phKey);
 
       return delResult == ERROR_SUCCESS;
     } catch (_) {
-      calloc.free(phKey);
       return false;
+    } finally {
+      calloc.free(phKey);
     }
   }
 
