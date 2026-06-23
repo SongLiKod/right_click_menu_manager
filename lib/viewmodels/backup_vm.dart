@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/backup_snapshot.dart';
+import '../models/menu_item.dart';
 import '../services/backup_service.dart';
 import '../services/shell_notify_service.dart';
 
@@ -79,14 +80,19 @@ class BackupVM extends ChangeNotifier {
     }
   }
 
-  /// 恢复默认
-  Future<bool> restoreDefault() async {
+  /// 预览将被删除的菜单项
+  Future<List<MenuItem>> previewDefault() async {
+    return _backupService.previewDefault();
+  }
+
+  /// 恢复默认（只删除指定列表中的项）
+  Future<bool> restoreDefault(List<MenuItem> targetItems) async {
     _isBusy = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final success = await _backupService.restoreDefault();
+      final success = await _backupService.restoreDefault(targetItems);
       if (success) {
         _shellNotifyService.notifyAssociationChanged();
       }

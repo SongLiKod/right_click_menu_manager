@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 import '../models/backup_snapshot.dart';
@@ -165,11 +166,21 @@ class _BackupPageState extends State<BackupPage> {
                     context: context,
                     builder: (ctx2) => ContentDialog(
                       title: const Text('恢复成功'),
-                      content: const Text('右键菜单已恢复到备份状态。'),
+                      content: const Text('右键菜单已恢复到备份状态。\n如部分菜单未刷新，可尝试重启资源管理器。'),
                       actions: [
-                        FilledButton(
+                        Button(
                           onPressed: () => Navigator.pop(ctx2),
                           child: const Text('确定'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.pop(ctx2);
+                            Process.run('taskkill', ['/F', '/IM', 'explorer.exe']);
+                            Future.delayed(const Duration(milliseconds: 500), () {
+                              Process.run('explorer.exe', []);
+                            });
+                          },
+                          child: const Text('重启资源管理器'),
                         ),
                       ],
                     ),
@@ -184,13 +195,72 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
-  void _restoreDefault(BuildContext context) {
+  void _restoreDefault(BuildContext context) async {
+    final vm = context.read<BackupVM>();
+    final itemsToDelete = await vm.previewDefault();
+
+    if (!mounted || itemsToDelete.isEmpty) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => ContentDialog(
+            title: const Text('无需操作'),
+            content: const Text('未找到可删除的自定义菜单项。'),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (ctx) => ContentDialog(
         title: const Text('确认恢复默认'),
-        content: const Text(
-            '此操作将删除所有自定义菜单项，恢复 Windows 默认右键菜单。\n\n当前配置将自动备份，可随时恢复。'),
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 500),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('以下 ${itemsToDelete.length} 个菜单项将被删除：',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[40]),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ListView.builder(
+                  itemCount: itemsToDelete.length,
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(children: [
+                      Icon(FluentIcons.delete, size: 14, color: Colors.red),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${itemsToDelete[i].displayName}  (${itemsToDelete[i].registryPath})',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('当前配置将自动备份，可随时恢复。',
+                style: TextStyle(fontSize: 11, color: Colors.grey[120])),
+          ],
+        ),
         actions: [
           Button(
             onPressed: () => Navigator.pop(ctx),
@@ -199,12 +269,39 @@ class _BackupPageState extends State<BackupPage> {
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await context.read<BackupVM>().restoreDefault();
+              final success = await vm.restoreDefault(itemsToDelete);
+              if (mounted && success) {
+                if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (ctx2) => ContentDialog(
+                      title: const Text('恢复成功'),
+                      content: const Text('右键菜单已恢复默认。\n如部分菜单未刷新，可尝试重启资源管理器。'),
+                      actions: [
+                        Button(
+                          onPressed: () => Navigator.pop(ctx2),
+                          child: const Text('确定'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.pop(ctx2);
+                            Process.run('taskkill', ['/F', '/IM', 'explorer.exe']);
+                            Future.delayed(const Duration(milliseconds: 500), () {
+                              Process.run('explorer.exe', []);
+                            });
+                          },
+                          child: const Text('重启资源管理器'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }
             },
             style: ButtonStyle(
               backgroundColor: WidgetStatePropertyAll(Colors.red.withValues(alpha: 0.8)),
             ),
-            child: const Text('恢复默认'),
+            child: Text('删除 ${itemsToDelete.length} 项'),
           ),
         ],
       ),

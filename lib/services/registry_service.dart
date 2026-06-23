@@ -108,8 +108,10 @@ class RegistryService {
 
       final hKey = phKey.value;
 
-      // 读取显示名称 (默认值)
-      final displayName = _readStringValue(hKey, null) ?? keyName;
+      // 读取显示名称: MUIVerb 优先，其次默认值，最后回退到 keyName
+      final displayName = _readStringValue(hKey, 'MUIVerb') ??
+          _readStringValue(hKey, null) ??
+          keyName;
 
       // 读取图标
       final iconPath = _readStringValue(hKey, 'Icon');
@@ -222,21 +224,18 @@ class RegistryService {
 
       final nameLen = maxNameLen.value + 1;
       final name = calloc<Uint16>(nameLen);
+      final index = calloc<DWORD>();
 
       for (var i = 0;; i++) {
-        final index = calloc<DWORD>();
         index.value = nameLen;
         final ret =
             RegEnumKeyEx(hKey, i, name.cast<Utf16>(), index, nullptr, nullptr, nullptr, nullptr);
-        calloc.free(index);
-
         if (ret == ERROR_NO_MORE_ITEMS) break;
         if (ret != ERROR_SUCCESS) continue;
 
         final extName = name.cast<Utf16>().toDartString();
         if (!extName.startsWith('.')) continue;
 
-        // 常见扩展名才扫描
         if (!_isCommonExtension(extName)) continue;
 
         final shellPath = '$extName\\shell';
@@ -244,6 +243,7 @@ class RegistryService {
         items.addAll(subItems);
       }
 
+      calloc.free(index);
       calloc.free(name);
       calloc.free(maxNameLen);
       RegCloseKey(hKey);
@@ -255,13 +255,42 @@ class RegistryService {
   }
 
   static const _commonExtensions = {
+    // 文本与文档
     '.txt', '.md', '.pdf', '.doc', '.docx', '.xls', '.xlsx',
-    '.ppt', '.pptx', '.zip', '.rar', '.7z', '.tar', '.gz',
-    '.jpg', '.png', '.gif', '.bmp', '.svg', '.mp3', '.mp4',
-    '.avi', '.mkv', '.py', '.js', '.ts', '.java', '.cpp',
-    '.c', '.h', '.cs', '.go', '.rs', '.html', '.css',
-    '.json', '.xml', '.yaml', '.yml', '.ini', '.cfg',
-    '.exe', '.msi', '.bat', '.ps1', '.sh', '.dll',
+    '.ppt', '.pptx', '.odt', '.ods', '.odp', '.rtf', '.wps',
+    '.csv', '.tsv',
+    // 压缩包
+    '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.zst',
+    '.tgz', '.tbz2',
+    // 图片
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp',
+    '.ico', '.tiff', '.tif', '.heic', '.raw', '.psd', '.ai',
+    // 音频
+    '.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a',
+    '.opus',
+    // 视频
+    '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm',
+    '.m4v', '.mpg', '.mpeg',
+    // 编程语言
+    '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.cpp', '.cxx',
+    '.cc', '.c', '.h', '.hpp', '.hxx', '.cs', '.vb', '.go',
+    '.rs', '.swift', '.kt', '.kts', '.dart', '.rb', '.php',
+    '.pl', '.lua', '.r', '.m', '.mm', '.scala', '.clj',
+    // Web 与标记
+    '.html', '.htm', '.css', '.scss', '.sass', '.less', '.vue',
+    '.svelte', '.astro', '.ejs', '.hbs', '.mustache',
+    // 配置文件与数据
+    '.json', '.xml', '.yaml', '.yml', '.ini', '.cfg', '.conf',
+    '.toml', '.env', '.properties', '.editorconfig',
+    // 二进制与可执行
+    '.exe', '.msi', '.bat', '.cmd', '.ps1', '.psm1', '.psd1',
+    '.sh', '.bash', '.zsh', '.dll', '.sys', '.com', '.scr',
+    '.vbs', '.wsf',
+    // 数据库
+    '.sql', '.db', '.sqlite', '.sqlite3', '.mdb', '.accdb',
+    // 其他常见
+    '.reg', '.lnk', '.iso', '.vhd', '.vhdx', '.torrent',
+    '.nfo', '.log', '.tmp', '.lock', '.part',
   };
 
   bool _isCommonExtension(String ext) => _commonExtensions.contains(ext.toLowerCase());
@@ -286,9 +315,15 @@ class RegistryService {
     required String command,
     String? iconPath,
     required MenuLevel level,
+    bool overwrite = false,
   }) async {
     final shellPath = '$hiveKey\\shell';
     final itemPath = '$shellPath\\$keyName';
+
+    // 检查键名是否已存在
+    if (keyExists(itemPath)) {
+      if (!overwrite) return false; // 调用方会检测返回 false 并提示冲突
+    }
 
     // 创建主键
     if (!_createKey(itemPath)) return false;
@@ -382,6 +417,25 @@ class RegistryService {
   }
 
   // ========== 底层注册表操作 ==========
+
+  /// 检查注册表键是否存在
+  bool keyExists(String path) {
+    final phKey = calloc<HKEY>();
+    try {
+      final subKey = path.toNativeUtf16();
+      final result = RegOpenKeyEx(hkcr, subKey, 0, KEY_READ, phKey);
+      calloc.free(subKey);
+      if (result == ERROR_SUCCESS) {
+        RegCloseKey(phKey.value);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    } finally {
+      calloc.free(phKey);
+    }
+  }
 
   bool _createKey(String path) {
     final phKey = calloc<HKEY>();

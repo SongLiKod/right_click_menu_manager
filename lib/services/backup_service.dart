@@ -110,17 +110,22 @@ class BackupService {
     return success ? regPath : null;
   }
 
-  /// 恢复默认（删除所有自定义菜单项）
-  Future<bool> restoreDefault() async {
+  /// 预览将被恢复默认删除的菜单项（有 command 的项）
+  Future<List<MenuItem>> previewDefault() async {
+    final items = await _registryService.scanAll();
+    return items.where((item) => item.command.isNotEmpty).toList();
+  }
+
+  /// 恢复默认（仅删除指定列表中仍存在的项）
+  Future<bool> restoreDefault(List<MenuItem> targetItems) async {
     // 先完整备份
     await backupAll('恢复默认前自动备份');
 
-    final items = await _registryService.scanAll();
     var success = true;
 
-    for (final item in items) {
-      // 只删除自定义项，保留系统项（简单判断：有 command 的才删）
-      if (item.command.isNotEmpty) {
+    for (final item in targetItems) {
+      // 重新确认该键仍存在再删除（防止并发修改）
+      if (_registryService.keyExists(item.registryPath)) {
         final result = await _registryService.deleteMenuItem(item);
         if (!result) success = false;
       }
